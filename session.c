@@ -393,13 +393,11 @@ do_authenticated1(Authctxt *authctxt)
 				debug("Port forwarding not permitted for this authentication.");
 				break;
 			}
-			if (!(options.allow_tcp_forwarding & FORWARD_REMOTE)) {
-				debug("Port forwarding not permitted.");
-				break;
-			}
 			debug("Received TCP/IP port forwarding request.");
 			if (channel_input_port_forward_request(s->pw->pw_uid == 0,
-			    &options.fwd_opts) < 0) {
+			      !(options.allow_tcp_forwarding & FORWARD_REMOTE), 
+			      &options.fwd_opts) < 0) 
+			{
 				debug("Port forwarding failed.");
 				break;
 			}

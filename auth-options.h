@@ -15,6 +15,17 @@
 #ifndef AUTH_OPTIONS_H
 #define AUTH_OPTIONS_H
 
+/* Handling permitted -R exception ports to listen on */
+/* The exceptions are allowed in per session config when -R is off globally. */
+#define PORT_MAP_SIZE (65536 / 8) /* Aloowed listener ports bitmap size in bytes */
+#define ADD_PERMITTED_PORT(_p) (permitted_listen[((_p) & 0xFFFF) >> 3] |= 1 << ((_p) & 0x7))
+#define CLEAR_PERMITTED_PORT(_p) (permitted_listen[((_p) & 0xFFFF) >> 3] &= ~(1 << ((_p) & 0x7)))
+#define IS_PERMITTED_PORT(_p) (permitted_listen[((_p) & 0xFFFF) >> 3] & (1 << ((_p) & 0x7)))
+#define PERMITTED_PORTS_CLEAR_ALL() memset(permitted_listen, 0, sizeof(permitted_listen))
+#define PERMITTED_PORTS_ADD_ALL() memset(permitted_listen, 0xFF, sizeof(permitted_listen))
+
+extern unsigned char permitted_listen[];
+
 /* Linked list of custom environment strings */
 struct envstring {
 	struct envstring *next;

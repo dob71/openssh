@@ -82,6 +82,7 @@
 #include "key.h"
 #include "authfd.h"
 #include "pathnames.h"
+#include "auth-options.h"
 
 /* -- channel core */
 
@@ -2888,13 +2889,16 @@ channel_setup_fwd_listener_tcpip(int type, struct Forward *fwd,
 		 */
 		if (type == SSH_CHANNEL_RPORT_LISTENER && fwd->listen_port == 0 &&
 		    allocated_listen_port != NULL && *allocated_listen_port > 0)
+		{
 			*lport_p = htons(*allocated_listen_port);
+		}
 
 		if (getnameinfo(ai->ai_addr, ai->ai_addrlen, ntop, sizeof(ntop),
 		    strport, sizeof(strport), NI_NUMERICHOST|NI_NUMERICSERV) != 0) {
 			error("%s: getnameinfo failed", __func__);
 			continue;
 		}
+
 		/* Create a port to listen for the host. */
 		sock = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
 		if (sock < 0) {
@@ -3441,7 +3445,8 @@ channel_request_rforward_cancel(struct Forward *fwd)
  * message if there was an error).
  */
 int
-channel_input_port_forward_request(int is_root, struct ForwardOptions *fwd_opts)
+channel_input_port_forward_request(int is_root, int check_listen_port, 
+                                   struct ForwardOptions *fwd_opts)
 {
 	int success = 0;
 	struct Forward fwd;
@@ -3451,6 +3456,14 @@ channel_input_port_forward_request(int is_root, struct ForwardOptions *fwd_opts)
 	fwd.listen_port = packet_get_int();
 	fwd.connect_host = packet_get_string(NULL);
 	fwd.connect_port = packet_get_int();
+
+	if (check_listen_port && !IS_PERMITTED_PORT(fwd.listen_port)) 
+	{
+		packet_disconnect(
+		    "Forwarding of port %d is not permitted.",
+		    fwd.listen_port);
+		return -1;
+	}
 
 #ifndef HAVE_CYGWIN
 	/*

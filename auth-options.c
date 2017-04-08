@@ -60,6 +60,9 @@ char *authorized_principals = NULL;
 
 extern ServerOptions options;
 
+/* Bitmap of -R permitted exception ports (used when globally -R is disabled) */
+unsigned char permitted_listen[PORT_MAP_SIZE];
+
 void
 auth_clear_options(void)
 {
@@ -81,6 +84,11 @@ auth_clear_options(void)
 	authorized_principals = NULL;
 	forced_tun_device = -1;
 	channel_clear_permitted_opens();
+	if ((options.allow_tcp_forwarding & FORWARD_REMOTE) != 0) {
+		PERMITTED_PORTS_ADD_ALL();
+	} else {
+		PERMITTED_PORTS_CLEAR_ALL();
+	}
 }
 
 /*
@@ -378,6 +386,50 @@ auth_parse_options(struct passwd *pw, char *opts, char *file, u_long linenum)
 			}
 			if ((options.allow_tcp_forwarding & FORWARD_LOCAL) != 0)
 				channel_add_permitted_opens(host, port);
+			free(patterns);
+			goto next_option;
+		}
+		cp = "permitrlisten=\"";
+		if (strncasecmp(opts, cp, strlen(cp)) == 0) {
+			char *p;
+			int port;
+			char *patterns = xmalloc(strlen(opts) + 1);
+
+			opts += strlen(cp);
+			i = 0;
+			while (*opts) {
+				if (*opts == '"')
+					break;
+				if (*opts == '\\' && opts[1] == '"') {
+					opts += 2;
+					patterns[i++] = '"';
+					continue;
+				}
+				patterns[i++] = *opts++;
+			}
+			if (!*opts) {
+				debug("%.100s, line %lu: missing end quote",
+				    file, linenum);
+				auth_debug_add("%.100s, line %lu: missing "
+				    "end quote", file, linenum);
+				free(patterns);
+				goto bad_option;
+			}
+			patterns[i] = '\0';
+			opts++;
+			p = patterns;
+			if (p == NULL || (port = permitopen_port(p)) < 0) {
+				debug("%.100s, line %lu: Bad permitrlisten port "
+				    "<%.100s>", file, linenum, p ? p : "");
+				auth_debug_add("%.100s, line %lu: "
+				    "Bad permitrlisten port", file, linenum);
+				free(patterns);
+				goto bad_option;
+			}
+			/* Update the mask only if global is disabled */
+			if ((options.allow_tcp_forwarding & FORWARD_REMOTE) == 0) {
+				ADD_PERMITTED_PORT(port);
+			}
 			free(patterns);
 			goto next_option;
 		}
