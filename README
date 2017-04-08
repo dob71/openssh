@@ -1,3 +1,16 @@
+This mod allows to limit ports client can chose when using -R.
+
+How to use:
+
+In the global config disable remote (or all) forwarding:
+  AllowTcpForwarding no
+
+In the authorized_keys for the keys that should be allowed some
+exceptions use:
+  permitrlisten="1234",permitrlisten="12345" ssh-rsa AAAAB...
+
+-----
+
 See http://www.openssh.com/txt/release-7.2p2 for the release notes.
 
 Please read http://www.openssh.com/report.html for bug reporting
