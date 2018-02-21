@@ -108,6 +108,7 @@
 #include "version.h"
 #include "ssherr.h"
 #include "myproposal.h"
+#include "auth-options.h"
 
 #ifdef ENABLE_PKCS11
 #include "ssh-pkcs11.h"
@@ -507,6 +508,9 @@ set_addrinfo_port(struct addrinfo *addrs, int port)
 	}
 }
 
+/* permitted_listen ref ended up compiled in for client through channels.c */
+unsigned char permitted_listen[PORT_MAP_SIZE];
+
 /*
  * Main program for the ssh client.
  */
@@ -597,6 +601,9 @@ main(int ac, char **av)
 	 * set.
 	 */
 	initialize_options(&options);
+
+	/* Normal client does not have restrictions on listen ports */
+	PERMITTED_PORTS_ADD_ALL();
 
 	/* Parse command-line arguments. */
 	host = NULL;
